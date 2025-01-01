@@ -1,3 +1,6 @@
+from typing import List, Optional
+
+import torch
 def word_error_rate(hypotheses: List[str], references: List[str], use_cer=False) -> float:
     """
     Computes Average Word Error rate between two texts represented as
