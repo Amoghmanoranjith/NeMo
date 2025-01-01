@@ -1,3 +1,6 @@
+from typing import List, Optional
+
+import torch
 def classification_accuracy(
     logits: torch.Tensor, targets: torch.Tensor, top_k: Optional[List[int]] = None
 ) -> List[float]:
