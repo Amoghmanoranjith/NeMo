@@ -7,7 +7,7 @@ import unicodedata
 
 import torch as t
 
-from nemo import logging
+import logging
 
 # Default word tokens
 PAD_token = 0  # Used for padding short sentences
