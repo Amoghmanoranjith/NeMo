@@ -37,7 +37,7 @@ from .neural_types import (
     NeuralTypeComparisonResult,
     NmTensor,
 )
-from nemo import logging
+import logging
 from nemo.core import NeuralModuleFactory
 from nemo.package_info import __version__ as nemo_version
 from nemo.utils.decorators.deprecated import deprecated
