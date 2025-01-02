@@ -22,7 +22,7 @@ from typing import List
 import numpy as np
 import torch
 
-from nemo import logging
+import logging
 from nemo.backends.pytorch.nm import DataLayerNM
 from nemo.core.neural_types import *
 
