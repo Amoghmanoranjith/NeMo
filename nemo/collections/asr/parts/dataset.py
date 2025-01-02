@@ -7,7 +7,7 @@ import kaldi_io
 import torch
 from torch.utils.data import Dataset
 
-from nemo import logging
+import logging
 from nemo.collections.asr.parts import collections, parsers
 
 
