@@ -19,7 +19,7 @@ from functools import partial
 from typing import Any, Dict, List, Optional, Union
 
 import torch
-
+import logging
 import nemo
 from .parts.dataset import AudioDataset, AudioLabelDataset, KaldiFeatureDataset, TranscriptDataset, seq_collate_fn
 from .parts.features import WaveformFeaturizer
@@ -37,7 +37,6 @@ __all__ = [
     'AudioToSpeechLabelDataLayer',
 ]
 
-logging = nemo.logging
 
 
 def _process_augmentations(augmenter) -> AudioAugmentor:
