@@ -6,7 +6,7 @@ import librosa
 import numpy as np
 from scipy import signal
 
-from nemo import logging
+import logging
 from nemo.collections.asr.parts import collections, parsers
 from nemo.collections.asr.parts.segment import AudioSegment
 
