@@ -1,4 +1,7 @@
-# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+# ! /usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,10 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = ['AxisKindAbstract', 'AxisKind', 'AxisType']
+
 from enum import Enum
 from typing import Optional
-
-__all__ = ['AxisKindAbstract', 'AxisKind', 'AxisType']
 
 
 class AxisKindAbstract(Enum):
@@ -41,9 +44,6 @@ class AxisKind(AxisKindAbstract):
     Width = 3
     Height = 4
     Any = 5
-    Sequence = 6
-    FlowGroup = 7
-    Singleton = 8  # Used to represent a axis that has size 1
 
     def __repr__(self):
         return self.__str__()
@@ -51,17 +51,13 @@ class AxisKind(AxisKindAbstract):
     def __str__(self):
         return str(self.name).lower()
 
-    def t_with_string(self, text):
-        # it checks if text is "t_<any string>"
-        return text.startswith("t_") and text.endswith("_") and text[2:-1] == self.__str__()
-
     @staticmethod
     def from_str(label):
         """Returns AxisKind instance based on short string representation"""
         _label = label.lower().strip()
         if _label == "b" or _label == "n" or _label == "batch":
             return AxisKind.Batch
-        elif _label == "t" or _label == "time" or (len(_label) > 2 and _label.startswith("t_")):
+        elif _label == "t" or _label == "time":
             return AxisKind.Time
         elif _label == "d" or _label == "c" or _label == "channel":
             return AxisKind.Dimension
@@ -69,12 +65,6 @@ class AxisKind(AxisKindAbstract):
             return AxisKind.Width
         elif _label == "h" or _label == "height":
             return AxisKind.Height
-        elif _label == "s" or _label == "singleton":
-            return AxisKind.Singleton
-        elif _label == "seq" or _label == "sequence":
-            return AxisKind.Sequence
-        elif _label == "flowgroup":
-            return AxisKind.FlowGroup
         elif _label == "any":
             return AxisKind.Any
         else:

@@ -1,4 +1,7 @@
-# Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+# ! /usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +15,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Optional
-
-import torch
-
-from nemo.core.neural_types.axes import AxisKind, AxisType
-from nemo.core.neural_types.comparison import NeuralTypeComparisonResult
-from nemo.core.neural_types.elements import ElementType, VoidType
-
 __all__ = [
     'NeuralType',
+    'NmTensor',
     'NeuralTypeError',
     'NeuralPortNameMismatchError',
     'NeuralPortNmTensorMismatchError',
+    'CanNotInferResultNeuralType',
 ]
+import uuid
+from typing import Optional, Tuple
+
+from nemo.core.neural_types.axes import AxisKind, AxisType
+from nemo.core.neural_types.comparison import NeuralTypeComparisonResult
+from nemo.core.neural_types.elements import *
 
 
-class NeuralType:
+class NeuralType(object):
     """This is the main class which would represent neural type concept.
-    It is used to represent *the types* of inputs and outputs.
-
+    nmTensors derives from this. It is used to represent *the types* of inputs and outputs.
     Args:
         axes (Optional[Tuple]): a tuple of AxisTypes objects representing the semantics of what varying each axis means
             You can use a short, string-based form here. For example: ('B', 'C', 'H', 'W') would correspond to an NCHW
@@ -44,34 +46,17 @@ class NeuralType:
     """
 
     def __str__(self):
-        if torch.jit.is_scripting():
-            return "SuppressedForTorchScript"
+
         if self.axes is not None:
-            return f"axes: {self.axes}; elements_type: {self.elements_type.__class__.__name__}"
+            return f"axes: {self.axes}; " f" elements_type: {self.elements_type.__class__.__name__}"
         else:
-            return f"axes: None; elements_type: {self.elements_type.__class__.__name__}"
+            return f"axes: None; " f" elements_type: {self.elements_type.__class__.__name__}"
 
-    def __init__(self, axes: Optional[Any] = None, elements_type: Optional[Any] = None, optional: bool = False):
-        """
-        Args:
-            axes: a tuple of AxisTypes objects representing the semantics of what varying each axis means
-            elements_type: None or ElementType; we need Any annotation here to avoid problems with TorchScript (it is checked in _init_internal)
-            optional: If input to the port of this type can be optional (False by default).
-        """
-        if not torch.jit.is_scripting():
-            self._init_internal(axes=axes, elements_type=elements_type, optional=optional)
-
-    @torch.jit.unused
-    def _init_internal(
-        self, axes: Optional[Any] = None, elements_type: Optional[ElementType] = None, optional: bool = False
-    ):
-        """Internals of __init__, separated to make TorchScript and autodoc work"""
-        if elements_type is None:
-            elements_type = VoidType()
+    def __init__(self, axes: Optional[Tuple] = None, elements_type: ElementType = VoidType(), optional=False):
         if not isinstance(elements_type, ElementType):
             raise ValueError(
-                "elements_type of NeuralType must be an instance of a class derived from ElementType. "
-                "Did you pass a class instead?"
+                f"elements_type of NeuralType must be an instance of a class derived from ElementType."
+                f"Did you pass a class instead?"
             )
         self.elements_type = elements_type
         if axes is not None:
@@ -83,7 +68,7 @@ class NeuralType:
                 elif isinstance(axis, AxisType):
                     axes_list.append(axis)
                 else:
-                    raise ValueError("axis type must be either str or AxisType instance")
+                    raise ValueError(f"axis type must be either str or AxisType instance")
             self.axes = tuple(axes_list)
         else:
             self.axes = None
@@ -92,9 +77,6 @@ class NeuralType:
     def compare(self, second) -> NeuralTypeComparisonResult:
         """Performs neural type comparison of self with second. When you chain two modules' inputs/outputs via
         __call__ method, this comparison will be called to ensure neural type compatibility."""
-        if torch.jit.is_scripting():
-            # suppress check for TorchScript
-            return NeuralTypeComparisonResult.SAME
         # First, handle dimensionality
         axes_a = self.axes
         axes_b = second.axes
@@ -129,26 +111,6 @@ class NeuralType:
                 return NeuralTypeComparisonResult.INCOMPATIBLE
         else:
             return NeuralTypeComparisonResult.INCOMPATIBLE
-
-    def compare_and_raise_error(self, parent_type_name, port_name, second_object):
-        """ Method compares definition of one type with another and raises an error if not compatible. """
-        if torch.jit.is_scripting():
-            # suppress for TorchScript
-            return
-        type_comatibility = self.compare(second_object)
-        if (
-            type_comatibility != NeuralTypeComparisonResult.SAME
-            and type_comatibility != NeuralTypeComparisonResult.GREATER
-        ):
-            raise NeuralPortNmTensorMismatchError(
-                parent_type_name, port_name, str(self), str(second_object.ntype), type_comatibility
-            )
-
-    def __eq__(self, other):
-        if isinstance(other, NeuralType):
-            return self.compare(other)
-
-        return False
 
     @staticmethod
     def __check_sanity(axes):
@@ -224,48 +186,90 @@ class NeuralType:
             else:
                 return 3
 
-    def __repr__(self):
-        if torch.jit.is_scripting():
-            return "SuppressedForTorchScript"
 
-        if self.axes is not None:
-            axes = str(self.axes)
-        else:
-            axes = "None"
+class NmTensor(NeuralType):
+    """Class representing data which flows between NeuralModules' ports.
+    It also has a type of NeuralType represented by inheriting from NeuralType
+    object."""
 
-        if self.elements_type is not None:
-            element_type = repr(self.elements_type)
-        else:
-            element_type = "None"
+    def __init__(self, producer, producer_args, name, ntype=None):
+        """NmTensor constructor.
 
-        data = f"axis={axes}, element_type={element_type}"
+        Args:
+          producer (NeuralModule): object which produced this
+          producer_args (dict): a dictionary of port_name->NmTensor value
+            of arguments which were sent to producer to create this
+        """
+        super(NmTensor, self).__init__(axes=ntype.axes, elements_type=ntype.elements_type, optional=ntype.optional)
+        self._producer = producer
+        self._producer_args = producer_args
+        self._name = name
+        self._uuid = str(uuid.uuid4())
 
-        if self.optional:
-            data = f"{data}, optional={self.optional}"
+    @property
+    def producer(self):
+        """
+        Returns:
+          NeuralModule object which produced this NmTensor.
+        """
+        return self._producer
 
-        final = f"{self.__class__.__name__}({data})"
-        return final
+    @property
+    def producer_args(self):
+        """
+        Returns:
+          a dictionary of port_name->NmTensor value
+          of arguments which were sent to producer to create this object
+        """
+        return self._producer_args
+
+    @property
+    def name(self):
+        """
+        Returns:
+          A NmTensor's name which should be equal to
+          the NeuralModule's output port's name which created it
+        """
+        return self._name
+
+    @property
+    def unique_name(self):
+        """Unique NMTensor name.
+        It is composed of non-unique name (self.name) and uuid of NeuralModule
+        which created this tensor.
+
+        Returns:
+          str: unique name
+        """
+        if self._producer is None:
+            raise ValueError("This NmTensor does not have a unique name")
+        return f"{self._name}~~~{self.producer}~~~{self._uuid}"
 
 
 class NeuralTypeError(Exception):
     """Base class for neural type related exceptions."""
+
+    pass
 
 
 class NeuralPortNameMismatchError(NeuralTypeError):
     """Exception raised when neural module is called with incorrect port
     names."""
 
-    def __init__(self, input_port_name):
-        super().__init__()
-        self.message = "Wrong input port name: {0}".format(input_port_name)
+    def __init__(self, message):
+        self.message = message
 
 
 class NeuralPortNmTensorMismatchError(NeuralTypeError):
     """Exception raised when a port is fed with a NmTensor of incompatible
     type."""
 
-    def __init__(self, class_name, port_name, first_type, second_type, type_comatibility):
-        super().__init__()
-        self.message = "\nIn {}. \nPort: {} and a NmTensor it was fed are \n".format(class_name, port_name)
-        self.message += "of incompatible neural types:\n\n{} \n\n and \n\n{}".format(first_type, second_type)
-        self.message += "\n\nType comparison result: {}".format(type_comatibility)
+    def __init__(self, message):
+        self.message = message
+
+
+class CanNotInferResultNeuralType(NeuralTypeError):
+    """Exception raised when NeuralType of output can not be inferred."""
+
+    def __init__(self, message):
+        self.message = message
