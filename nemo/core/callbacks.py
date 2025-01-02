@@ -23,7 +23,7 @@ import time
 import warnings
 from abc import ABC, abstractmethod
 from collections import namedtuple
-
+import logging
 import nemo
 from nemo.utils import get_checkpoint_from_dir
 
@@ -33,10 +33,7 @@ try:
     _WANDB_AVAILABLE = True
 except (ImportError, ModuleNotFoundError):
     _WANDB_AVAILABLE = False
-
-logging = nemo.logging
-
-
+    
 class ActionCallback(ABC):
     """Abstract interface for callbacks.
     """
