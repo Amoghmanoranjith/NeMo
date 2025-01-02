@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.nn.parallel import DistributedDataParallel as DDP
 
-from nemo import logging
+import logging
 from nemo.backends.pytorch.module_wrapper import TrainableNeuralModuleWrapper
 from nemo.backends.pytorch.nm import DataLayerNM, TrainableNM
 from nemo.backends.pytorch.optimizers import AdamW, Novograd, master_params
