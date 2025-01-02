@@ -3,7 +3,7 @@ from statistics import mean
 
 import torch
 
-from nemo import logging
+import logging
 
 
 def compute_accuracy(tensors):
