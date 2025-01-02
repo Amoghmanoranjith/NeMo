@@ -31,15 +31,12 @@ from enum import Enum
 from typing import List, Optional
 
 import numpy as np
-
+import logging
 import nemo
 from ..utils import ExpManager
 from .callbacks import ActionCallback, EvaluatorCallback
 from .neural_types import *
 from nemo.utils.decorators import deprecated
-
-logging = nemo.logging
-
 
 class DeploymentFormat(Enum):
     """Which format to use when exporting a Neural Module for deployment"""
