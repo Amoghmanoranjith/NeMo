@@ -180,6 +180,7 @@ class FilterbankFeatures(nn.Module):
                 win_length=self.win_length,
                 center=True,
                 window=self.window.to(dtype=torch.float),
+                return_complex=True, 
             )
 
         self.normalize = normalize
