@@ -259,6 +259,7 @@ class FilterbankFeatures(nn.Module):
             x = x.sum(-1)
 
         # dot with filterbank energies
+        # some error with shape here
         x = torch.matmul(self.fb.to(x.dtype), x)
 
         # log features if required
