@@ -345,13 +345,6 @@ class AudioLabelDataset(Dataset):
     Dataset that loads tensors via a json file containing paths to audio
     files, command class, and durations (in seconds). Each new line is a
     different sample. Example below:
-
-    {"audio_filepath": "/path/to/audio.wav", "label":
-    "label", "duration": 23.147}
-    ...
-    {"audio_filepath": "/path/to/audio.wav", "label": "label",
-    "offset": 301.75, "duration": 0.82}
-
     Args:
         manifest_filepath: Path to manifest json as described above. Can
             be comma-separated paths.
